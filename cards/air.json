@@ -1,0 +1,62 @@
+[
+  {
+    "id": "air-001",
+    "realm": "air",
+    "difficulty": "easy",
+    "title": "Feather Float",
+    "instructions": "Keep a lightweight object (feather, paper) in the air using only breaths for 15 seconds.",
+    "successSteps": 1,
+    "failSteps": -1,
+    "image": "assets/air/feather_float.png"
+  },
+  {
+    "id": "air-002",
+    "realm": "air",
+    "difficulty": "easy",
+    "title": "Whisper Chain",
+    "instructions": "Whisper a word to the next player; after the chain, reveal whether the final word matches the original.",
+    "successSteps": 1,
+    "failSteps": -1,
+    "image": "assets/air/whisper_chain.png"
+  },
+  {
+    "id": "air-003",
+    "realm": "air",
+    "difficulty": "medium",
+    "title": "Breeze Pattern",
+    "instructions": "Create a simple body movement pattern timed to 8 beats and repeat it in unison twice.",
+    "successSteps": 2,
+    "failSteps": -2,
+    "image": "assets/air/breeze_pattern.png"
+  },
+  {
+    "id": "air-004",
+    "realm": "air",
+    "difficulty": "medium",
+    "title": "Kite Words",
+    "instructions": "Each player says a single word to build a short sentence in order; it must be grammatically correct.",
+    "successSteps": 2,
+    "failSteps": -2,
+    "image": "assets/air/kite_words.png"
+  },
+  {
+    "id": "air-005",
+    "realm": "air",
+    "difficulty": "hard",
+    "title": "Gale Relay",
+    "instructions": "Relay a soft ball across the room using only throws underhand; complete within 25 seconds without dropping.",
+    "successSteps": 3,
+    "failSteps": -3,
+    "image": "assets/air/gale_relay.png"
+  },
+  {
+    "id": "air-006",
+    "realm": "air",
+    "difficulty": "hard",
+    "title": "Wind Story",
+    "instructions": "Tell a coherent story where each player speaks for exactly 5 seconds; maintain narrative flow for at least 6 players.",
+    "successSteps": 3,
+    "failSteps": -2,
+    "image": "assets/air/wind_story.png"
+  }
+]

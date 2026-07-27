@@ -1,0 +1,93 @@
+[
+  {
+    "id": "water-001",
+    "realm": "water",
+    "difficulty": "easy",
+    "title": "Calm the Ripples",
+    "instructions": "Players must hum a short melody together for 10 seconds without stopping.",
+    "successSteps": 2,
+    "failSteps": -1,
+    "image": "assets/water/cards/water-001.png"
+  },
+  {
+    "id": "water-002",
+    "realm": "water",
+    "difficulty": "easy",
+    "title": "Bottle Message",
+    "instructions": "Write a two-line encouraging message to another player within 30 seconds.",
+    "successSteps": 1,
+    "failSteps": -1,
+    "image": "assets/water/cards/water-002.png"
+  },
+  {
+    "id": "water-003",
+    "realm": "water",
+    "difficulty": "medium",
+    "title": "Tide Memory",
+    "instructions": "One player lists 5 items seen near the shore; the next repeats and adds one more. Continue until someone forgets.",
+    "successSteps": 3,
+    "failSteps": -2,
+    "image": "assets/water/cards/water-003.png"
+  },
+  {
+    "id": "water-004",
+    "realm": "water",
+    "difficulty": "medium",
+    "title": "Wave Pattern",
+    "instructions": "Using only hand motions, players must create a repeating two-step wave pattern together for 6 beats.",
+    "successSteps": 2,
+    "failSteps": -2,
+    "image": "assets/water/cards/water-004.png"
+  },
+  {
+    "id": "water-005",
+    "realm": "water",
+    "difficulty": "hard",
+    "title": "Storm Navigation",
+    "instructions": "Blindfold one player and guide them verbally across a small obstacle course in under 30 seconds.",
+    "successSteps": 4,
+    "failSteps": -3,
+    "image": "assets/water/cards/water-005.png"
+  },
+  {
+    "id": "water-006",
+    "realm": "water",
+    "difficulty": "hard",
+    "title": "Echo of the Deep",
+    "instructions": "Players must collectively tell a short improvised story about the sea, each adding one sentence, keeping it coherent for 8 sentences.",
+    "successSteps": 3,
+    "failSteps": -2,
+    "image": "assets/water/cards/water-006.png"
+  }
+
+  ,
+  {
+    "id": "water-007",
+    "realm": "water",
+    "type": "quest_giver",
+    "npc": {
+      "name": "Aino",
+      "title": "Spirit of the Living Waters",
+      "description": "A calm, guiding spirit who asks the players to restore balance to the shore.",
+      "dialogue": [
+        "Greetings, travelers. The waters whisper — will you help?",
+        "Bring back the sunken rune and quiet the restless tides.",
+        "Return when the Sampo sings and I shall bless your journey."
+      ]
+    },
+    "quest": {
+      "id": "quest-water-rune",
+      "title": "The Sunken Rune",
+      "description": "Locate the hidden rune beneath the waves by completing the following mini-games.",
+      "tasks": [
+        { "ref": "water-003", "description": "Tide Memory" },
+        { "ref": "water-004", "description": "Wave Pattern" },
+        { "ref": "water-002", "description": "Bottle Message" }
+      ],
+      "rewardSteps": 5,
+      "penaltySteps": -3
+    },
+    "difficulty": "special",
+    "image": "assets/water/aino.png"
+  }
+]

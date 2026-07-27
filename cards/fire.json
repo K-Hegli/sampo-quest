@@ -1,0 +1,62 @@
+[
+  {
+    "id": "fire-001",
+    "realm": "fire",
+    "difficulty": "easy",
+    "title": "Spark Match",
+    "instructions": "Quickly name three warm things you see around you within 10 seconds.",
+    "successSteps": 1,
+    "failSteps": -1,
+    "image": "assets/fire/spark_match.png"
+  },
+  {
+    "id": "fire-002",
+    "realm": "fire",
+    "difficulty": "easy",
+    "title": "Flame Finger",
+    "instructions": "Create a finger-snapping rhythm and have the group clap along for 8 beats in sync.",
+    "successSteps": 1,
+    "failSteps": -1,
+    "image": "assets/fire/flame_finger.png"
+  },
+  {
+    "id": "fire-003",
+    "realm": "fire",
+    "difficulty": "medium",
+    "title": "Ember Exchange",
+    "instructions": "Exchange a compliment with each player in under 30 seconds total without repeating words.",
+    "successSteps": 2,
+    "failSteps": -2,
+    "image": "assets/fire/ember_exchange.png"
+  },
+  {
+    "id": "fire-004",
+    "realm": "fire",
+    "difficulty": "medium",
+    "title": "Torch Balance",
+    "instructions": "Walk heel-to-toe along a short straight line while holding an imaginary torch for 12 steps.",
+    "successSteps": 2,
+    "failSteps": -2,
+    "image": "assets/fire/torch_balance.png"
+  },
+  {
+    "id": "fire-005",
+    "realm": "fire",
+    "difficulty": "hard",
+    "title": "Inferno Recall",
+    "instructions": "Memorize the order of six colored cards shown for 10 seconds; recreate the order from memory.",
+    "successSteps": 4,
+    "failSteps": -3,
+    "image": "assets/fire/inferno_recall.png"
+  },
+  {
+    "id": "fire-006",
+    "realm": "fire",
+    "difficulty": "hard",
+    "title": "Blaze Chorus",
+    "instructions": "Compose a short call-and-response chant and perform it with dynamics (loud/soft) changes.",
+    "successSteps": 3,
+    "failSteps": -2,
+    "image": "assets/fire/blaze_chorus.png"
+  }
+]

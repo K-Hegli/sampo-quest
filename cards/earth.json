@@ -1,0 +1,62 @@
+[
+  {
+    "id": "earth-001",
+    "realm": "earth",
+    "difficulty": "easy",
+    "title": "Stone Stack",
+    "instructions": "Stack three small objects (stones, blocks) into a stable tower within 20 seconds.",
+    "successSteps": 1,
+    "failSteps": -1,
+    "image": "assets/earth/stone_stack.png"
+  },
+  {
+    "id": "earth-002",
+    "realm": "earth",
+    "difficulty": "easy",
+    "title": "Root Relay",
+    "instructions": "Pass a small token around the group using only elbows; complete two full rotations.",
+    "successSteps": 2,
+    "failSteps": -1,
+    "image": "assets/earth/root_relay.png"
+  },
+  {
+    "id": "earth-003",
+    "realm": "earth",
+    "difficulty": "medium",
+    "title": "Echo Cave",
+    "instructions": "One player whispers a phrase; it must be correctly repeated by the last player after being whispered around the circle.",
+    "successSteps": 2,
+    "failSteps": -2,
+    "image": "assets/earth/echo_cave.png"
+  },
+  {
+    "id": "earth-004",
+    "realm": "earth",
+    "difficulty": "medium",
+    "title": "Moss Maze",
+    "instructions": "Guide a blindfolded player through a short path using only single-word directions.",
+    "successSteps": 3,
+    "failSteps": -2,
+    "image": "assets/earth/moss_maze.png"
+  },
+  {
+    "id": "earth-005",
+    "realm": "earth",
+    "difficulty": "hard",
+    "title": "Tremor Balance",
+    "instructions": "All players stand on one leg for 30 seconds while holding hands; no one may touch the ground with the other foot.",
+    "successSteps": 4,
+    "failSteps": -3,
+    "image": "assets/earth/tremor_balance.png"
+  },
+  {
+    "id": "earth-006",
+    "realm": "earth",
+    "difficulty": "hard",
+    "title": "Mountain Song",
+    "instructions": "Compose and sing a short chant together where each player adds a line that rhymes with the previous.",
+    "successSteps": 3,
+    "failSteps": -2,
+    "image": "assets/earth/mountain_song.png"
+  }
+]

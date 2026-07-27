@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Sampo Quest — Water Realm (Prototype)</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div id="loginScreen" class="login-screen">
+      <div class="login-card">
+        <img src="../assets/login.png" alt="Login" class="login-art"/>
+        <h2>Welcome to Sampo Quest — Water Realm</h2>
+        <input id="playerNameInput" placeholder="Enter your name" />
+        <div style="margin-top:8px;display:flex;gap:8px;justify-content:center">
+          <button id="createBtn">Create Game</button>
+          <input id="sessionInput" placeholder="Session code" style="width:140px" />
+          <button id="joinBtn">Join Game</button>
+        </div>
+        <div style="margin-top:8px">
+          <small>After creating a game share the session code with other players.</small>
+        </div>
+      </div>
+    </div>
+
+    <div id="appRoot" class="app hidden">
+      <header>
+        <h1>Water Realm — Playtest</h1>
+        <div id="playerDisplay" style="font-size:14px;opacity:0.9"></div>
+        <div class="controls">
+          <button id="drawBtn">Draw Card</button>
+          <button id="ainoBtn">Talk to Aino</button>
+          <button id="resetBtn">Reset</button>
+        </div>
+      </header>
+
+      <main>
+        <section class="left">
+          <div class="board-wrap">
+            <img id="boardImg" src="../assets/water/board.png" alt="Water board"/>
+            <div id="positionMarker" class="marker">V</div>
+          </div>
+        </section>
+
+        <section class="right">
+          <div class="status">
+            <p><strong>Position:</strong> <span id="position">0</span></p>
+            <p><strong>Realm Progress:</strong> <span id="progress">0/16</span></p>
+          </div>
+
+          <div id="cardArea" class="card-area">
+            <p class="hint">Draw a card to begin.</p>
+          </div>
+        </section>
+      </main>
+
+      <div id="modal" class="modal hidden">
+        <div class="modal-content">
+          <button id="closeModal" class="close">×</button>
+          <div id="modalBody"></div>
+        </div>
+      </div>
+    </div>
+
+    <script src="app.js"></script>
+  </body>
+</html>
