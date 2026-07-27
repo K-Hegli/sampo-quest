@@ -67,9 +67,10 @@ wss.on('connection', function connection(ws){
       // select random card and broadcast; initialize completion tracking
       const sessionId = ws.sessionId
       const s = sessions.get(sessionId)
-      if(!s) return
-      const card = waterCards[Math.floor(Math.random()*waterCards.length)]
-      s.currentCard = card
+        if(!s) return
+        if(s.finished){ ws.send(JSON.stringify({ type:'error', message:'Realm already completed' })); return }
+        const card = waterCards[Math.floor(Math.random()*waterCards.length)]
+        s.currentCard = card
       s.completions = new Set()
       broadcastSession(sessionId, { type:'cardDrawn', card })
         else if(msg.type === 'complete'){
@@ -89,10 +90,17 @@ wss.on('connection', function connection(ws){
             const delta = Number(s.currentCard.successSteps) || 0
             s.position += delta
             if(s.position < 0) s.position = 0
-            // broadcast resolved and new position
-            broadcastSession(sessionId, { type:'cardResolved', result: 'success', delta, position: s.position })
-            s.currentCard = null
-            s.completions = new Set()
+              // check for realm completion (12 segments)
+              if(s.position >= 12){
+                s.finished = true
+                broadcastSession(sessionId, { type:'cardResolved', result: 'success', delta, position: s.position })
+                broadcastSession(sessionId, { type:'realmComplete', position: s.position })
+              } else {
+                // broadcast resolved and new position
+                broadcastSession(sessionId, { type:'cardResolved', result: 'success', delta, position: s.position })
+              }
+              s.currentCard = null
+              s.completions = new Set()
           }
         }
     }
