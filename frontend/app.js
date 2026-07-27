@@ -132,7 +132,20 @@ async function init(){
 
   // Pause music when moving into the app
   const originalDoLogin = doLogin
-  doLogin = function(){ if(loginMusic) try{ loginMusic.pause() }catch(e){}; originalDoLogin() }
+  doLogin = function(){
+    if(loginMusic){
+      try{
+        loginMusic.pause()
+        loginMusic.currentTime = 0
+        loginMusic.muted = true
+      }catch(e){}
+      // update UI and persist preference
+      const musicToggleEl = document.getElementById('musicToggle')
+      if(musicToggleEl){ musicToggleEl.setAttribute('aria-pressed','true'); musicToggleEl.textContent = '🔇' }
+      try{ localStorage.setItem('sampo_music_muted','true') }catch(e){}
+    }
+    originalDoLogin()
+  }
 
   // Wire main controls
   drawBtn.addEventListener('click', ()=>{ if(ws && sessionId) sendWS({ type:'draw' }) ; else drawCard() })
