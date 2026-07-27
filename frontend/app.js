@@ -119,6 +119,21 @@ async function init(){
 
   nameInput.addEventListener('keypress', (e)=>{ if(e.key==='Enter') doLogin() })
 
+  // Login music controls
+  const loginMusic = document.getElementById('loginMusic')
+  const musicToggle = document.getElementById('musicToggle')
+  function updateMusicButton(){ if(!musicToggle || !loginMusic) return; const muted = loginMusic.muted; musicToggle.setAttribute('aria-pressed', muted ? 'true' : 'false'); musicToggle.textContent = muted ? '🔇' : '🔊' }
+  function tryPlayMusic(){ if(!loginMusic) return; loginMusic.loop = true; loginMusic.volume = 0.6; const stored = localStorage.getItem('sampo_music_muted'); if(stored==='true') loginMusic.muted = true; updateMusicButton(); const p = loginMusic.play(); if(p && p.catch) p.catch(()=>{ // wait for user gesture
+      const resume = ()=>{ loginMusic.play().catch(()=>{}); document.removeEventListener('click', resume) }
+      document.addEventListener('click', resume)
+    }) }
+  if(loginScreen && !loginScreen.classList.contains('hidden')) tryPlayMusic()
+  if(musicToggle){ musicToggle.addEventListener('click', ()=>{ if(!loginMusic) return; loginMusic.muted = !loginMusic.muted; localStorage.setItem('sampo_music_muted', loginMusic.muted ? 'true' : 'false'); updateMusicButton() }) }
+
+  // Pause music when moving into the app
+  const originalDoLogin = doLogin
+  doLogin = function(){ if(loginMusic) try{ loginMusic.pause() }catch(e){}; originalDoLogin() }
+
   // Wire main controls
   drawBtn.addEventListener('click', ()=>{ if(ws && sessionId) sendWS({ type:'draw' }) ; else drawCard() })
   ainoBtn.addEventListener('click', showAino)

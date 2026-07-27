@@ -58,3 +58,8 @@ html,body{height:100%}
 /* pixel scaling */
 img.pixel{image-rendering:pixelated;width:100%}
 
+/* login music toggle */
+.mute-btn{position:absolute;right:12px;top:12px;background:rgba(0,0,0,0.6);color:#cff;border:2px solid rgba(255,255,255,0.06);padding:6px 8px;border-radius:6px;cursor:pointer}
+.mute-btn[aria-pressed="true"]{background:rgba(255,255,255,0.06);color:#9ff}
+
+
