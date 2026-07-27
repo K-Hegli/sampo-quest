@@ -13,6 +13,21 @@ async function init(){
     return
   }
 
+  // Router: if the URL already contains /session/<id>, auto-open session
+  const path = location.pathname || '/'
+  const sessionMatch = path.match(/^\/session\/(.+)/)
+  if(sessionMatch){
+    const sid = sessionMatch[1]
+    // hide login and show app
+    window.playerName = nameInput.value || 'Player'
+    loginScreen.classList.add('hidden')
+    appRoot.classList.remove('hidden')
+    sessionId = sid.toUpperCase()
+    connectWS()
+    // try joining when ws opens
+    setTimeout(()=>{ if(ws && ws.readyState===WebSocket.OPEN) sendWS({ type:'join', sessionId, name: window.playerName }) }, 300)
+  }
+
   // Setup login flow: show login screen first
   const createBtn = document.getElementById('createBtn')
   const joinBtn = document.getElementById('joinBtn')
@@ -61,6 +76,8 @@ async function init(){
       } else {
         // local fallback session code
         sessionId = Math.random().toString(36).slice(2,8).toUpperCase()
+        // update URL to session route
+        history.replaceState({}, '', `/session/${sessionId}`)
         document.getElementById('playerDisplay').textContent = `Player: ${window.playerName} — Session: ${sessionId} (local)`
         alert(`Local session created: ${sessionId} (no backend connection). Invite others once backend is configured.`)
       }
@@ -74,6 +91,9 @@ async function init(){
     connectWS()
     setTimeout(()=>{
       if(ws && ws.readyState===WebSocket.OPEN){
+        // navigate to session URL and send join
+        history.replaceState({}, '', `/session/${code}`)
+        sessionId = code
         sendWS({ type:'join', sessionId: code, name: window.playerName })
       } else {
         alert('Unable to join: backend WebSocket not connected. Configure BACKEND_WS_URL or run the backend and try again.')
