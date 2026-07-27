@@ -35,7 +35,10 @@ async function init(){
 
   function connectWS(){
     if(ws) return
-    const url = (location.hostname === 'localhost') ? 'ws://localhost:8080' : `wss://${location.host.replace(/^www\./,'')}:8080`
+    // Allow deployment to set the backend WebSocket via a global `BACKEND_WS_URL` env var in Vercel.
+    // If not set, fall back to localhost for development.
+    const envUrl = (typeof window !== 'undefined' && window.BACKEND_WS_URL) ? window.BACKEND_WS_URL : null
+    const url = envUrl || ((location.hostname === 'localhost') ? 'ws://localhost:8080' : `wss://${location.hostname}:8080`)
     ws = new WebSocket(url)
     ws.addEventListener('open', ()=>{ console.log('ws open') })
     ws.addEventListener('message', e=>{
