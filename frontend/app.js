@@ -1,7 +1,7 @@
 const CARD_JSON = '../cards/water.json'
 let cards = []
 let position = 0
-const MAX_STEPS = 16
+const MAX_STEPS = 12
 
 async function init(){
   try{
@@ -130,21 +130,40 @@ function showCard(card){
   el.innerHTML = `
     <h3 class="card-title">${card.title}</h3>
     <div class="card-instructions">${card.instructions}</div>
-    <div class="card-meta">Difficulty: ${card.difficulty} — Success: ${card.successSteps} / Fail: ${card.failSteps}</div>
-    <div class="card-actions" style="margin-top:12px">
-      <button class="success">Success</button>
-      <button class="fail">Fail</button>
-    </div>
+    <div class="card-meta">Difficulty: ${card.difficulty} — Moves: ${card.successSteps}</div>
+    <div id="completionArea" style="margin-top:12px"></div>
   `
 
-  el.querySelector('.success').addEventListener('click', ()=>{
-    applyMove(card.successSteps)
-    closeModal()
-  })
-  el.querySelector('.fail').addEventListener('click', ()=>{
-    applyMove(card.failSteps)
-    closeModal()
-  })
+  const completionArea = el.querySelector('#completionArea')
+
+  if(ws && sessionId){
+    // multiplayer: show Complete button (each player must click)
+    const btn = document.createElement('button')
+    btn.textContent = 'Complete'
+    btn.className = 'success'
+    btn.addEventListener('click', ()=>{
+      sendWS({ type: 'complete' })
+      btn.disabled = true
+      btn.textContent = 'Waiting...'
+    })
+    completionArea.appendChild(btn)
+    const list = document.createElement('div')
+    list.id = 'completionList'
+    list.textContent = 'Completed: 0'
+    completionArea.appendChild(list)
+  } else {
+    // single-player fallback: immediate success/fail
+    const succ = document.createElement('button')
+    succ.className = 'success'
+    succ.textContent = 'Success'
+    succ.addEventListener('click', ()=>{ applyMove(card.successSteps); closeModal() })
+    const fail = document.createElement('button')
+    fail.className = 'fail'
+    fail.textContent = 'Fail'
+    fail.addEventListener('click', ()=>{ applyMove(card.failSteps); closeModal() })
+    completionArea.appendChild(succ)
+    completionArea.appendChild(fail)
+  }
 
   showModal(el)
 }
@@ -175,6 +194,21 @@ function handleMessage(msg){
     // show the same card for all
     showCard(msg.card)
   }
+  else if(msg.type === 'cardCompletion'){
+    // update completion list in modal
+    const list = document.getElementById('completionList')
+    if(list){
+      list.textContent = `Completed: ${msg.completed.length}`
+    }
+  }
+  else if(msg.type === 'cardResolved'){
+    // card resolved (all completed) — close modal and update position
+    position = msg.position || position
+    renderStatus()
+    closeModal()
+    // show brief notice
+    alert(`Card resolved: ${msg.result}. Moved ${msg.delta} steps.`)
+  }
   else if(msg.type === 'position'){
     position = msg.position
     renderStatus()
@@ -187,11 +221,21 @@ function handleMessage(msg){
 function renderStatus(){
   document.getElementById('position').textContent = position
   document.getElementById('progress').textContent = `${position}/${MAX_STEPS}`
-  // Position marker (rough radial placement) — simple: rotate marker around center by sector
-  const marker = document.getElementById('positionMarker')
-  if(!marker) return
-  const angle = (position / MAX_STEPS) * 360
-  marker.style.transform = `translate(-50%,-50%) rotate(${angle}deg)`
+  // Move Väinämöinen image around the board in a circle
+  const vain = document.getElementById('vainamoinenImg')
+  const board = document.getElementById('boardImg')
+  if(!vain || !board) return
+  const rect = board.getBoundingClientRect()
+  const cx = rect.width/2
+  const cy = rect.height/2
+  const angle = (position / MAX_STEPS) * 2 * Math.PI
+  const radius = Math.min(cx, cy) * 0.45
+  const x = cx + radius * Math.cos(angle - Math.PI/2)
+  const y = cy + radius * Math.sin(angle - Math.PI/2)
+  // position absolutely relative to board container
+  vain.style.left = `${x}px`
+  vain.style.top = `${y}px`
+  vain.style.transform = `translate(-50%,-50%)`
 }
 
 function resetGame(){
