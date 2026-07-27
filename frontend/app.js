@@ -5,6 +5,11 @@ const MAX_STEPS = 12
 let ws = null
 let sessionId = null
 let players = []
+let currentCard = null
+let completedBy = []
+let lastWsMessage = null
+let connectionMode = 'UNKNOWN' // 'REAL' or 'MOCK' or 'NONE'
+let debugCollapsed = (localStorage.getItem('sampo_debug_collapsed') === 'true')
 
 // Lightweight mock WebSocket for offline/dev testing
 class MockSocket{
@@ -49,7 +54,8 @@ class MockSocket{
   }
 }
 
-function initMockSocket(){ ws = new MockSocket(); ws.addEventListener('message', (e)=>{ let msg; try{ msg = JSON.parse(e.data) }catch(err){ return } handleMessage(msg) }); ws.addEventListener('open', ()=>{ console.log('mock ws open') }) }
+// mark mock mode when initialized
+function initMockSocket(){ ws = new MockSocket(); connectionMode = 'MOCK'; ws.addEventListener('message', (e)=>{ let msg; try{ msg = JSON.parse(e.data) }catch(err){ return } handleMessage(msg) }); ws.addEventListener('open', ()=>{ console.log('mock ws open') }) }
 
 async function init(){
   try{
@@ -116,6 +122,7 @@ async function init(){
     const envUrl = (typeof window !== 'undefined' && window.BACKEND_WS_URL) ? window.BACKEND_WS_URL : null
     const url = envUrl || ((location.hostname === 'localhost') ? 'ws://localhost:8080' : `wss://${location.hostname}:8080`)
     ws = new WebSocket(url)
+    connectionMode = 'REAL'
     ws.addEventListener('open', ()=>{ console.log('ws open'); if(sessionId) sendWS({ type:'stateRequest' }) })
     ws.addEventListener('error', (err)=>{ console.warn('ws error, falling back to mock', err); try{ initMockSocket() }catch(e){ console.error(e) } })
     ws.addEventListener('message', e=>{
@@ -210,7 +217,7 @@ async function init(){
   }
 
   // debug
-  debugPanel.textContent = `Backend: ${ (typeof window.BACKEND_WS_URL==='string') ? window.BACKEND_WS_URL : 'unset' }`
+  updateDebug()
 
   renderStatus()
 }
@@ -219,6 +226,34 @@ function drawCard(){
   const pool = cards.filter(c => c.type !== 'quest_giver')
   const card = pool[Math.floor(Math.random() * pool.length)]
   showCard(card)
+}
+
+function updateDebug(){
+  try{
+    const el = document.getElementById('debugPanel')
+    if(!el) return
+    const backend = (typeof window.BACKEND_WS_URL==='string') ? window.BACKEND_WS_URL : (connectionMode==='MOCK' ? 'MOCK' : 'unset')
+    const status = ws ? (ws.readyState===1 ? 'OPEN' : (ws.readyState===3 ? 'CLOSED' : 'CONNECTING')) : 'NONE'
+    const playersList = players && players.length ? players.join(', ') : '—'
+    const cc = currentCard ? `${currentCard.id || ''} ${currentCard.title || ''} (steps:${currentCard.successSteps||currentCard.steps||''})` : '—'
+    const completed = (completedBy && completedBy.length) ? completedBy.join(', ') : '—'
+    el.innerHTML = `
+      <div class="dev-debug">
+        <button id="debugToggle" class="dev-toggle">${debugCollapsed? '▶':'▼'} DEV DEBUG</button>
+        <div class="dev-content" style="display:${debugCollapsed?'none':'block'}">
+          <div class="dev-row"><strong>Backend:</strong> <span>${backend}</span></div>
+          <div class="dev-row"><strong>Conn:</strong> <span>${status}</span></div>
+          <div class="dev-row"><strong>Session:</strong> <span>${sessionId||'—'}</span></div>
+          <div class="dev-row"><strong>Players:</strong> <span>${playersList}</span></div>
+          <div class="dev-row"><strong>Position:</strong> <span>${position}</span></div>
+          <div class="dev-row"><strong>CurrentCard:</strong> <pre>${cc}</pre></div>
+          <div class="dev-row"><strong>CompletedBy:</strong> <span>${completed}</span></div>
+          <div class="dev-row"><strong>Last WS:</strong> <pre>${lastWsMessage||'—'}</pre></div>
+        </div>
+      </div>`
+    const btn = document.getElementById('debugToggle')
+    if(btn){ btn.addEventListener('click', ()=>{ debugCollapsed = !debugCollapsed; localStorage.setItem('sampo_debug_collapsed', debugCollapsed?'true':'false'); updateDebug() }) }
+  }catch(e){console.warn('debug update failed', e)}
 }
 
 function showAino(){
@@ -274,6 +309,7 @@ function applyMove(delta){
 }
 
 function handleMessage(msg){
+  try{ lastWsMessage = typeof msg === 'string' ? msg : JSON.stringify(msg) }catch(e){ lastWsMessage = String(msg) }
   if(msg.type === 'created'){
     sessionId = msg.sessionId
     history.replaceState({},'',`/session/${sessionId}`)
@@ -291,16 +327,21 @@ function handleMessage(msg){
     // authoritative state from server
     players = msg.state.players || []
     position = msg.state.position || 0
+    currentCard = msg.state.currentCard || null
+    completedBy = msg.state.completedBy || msg.state.completed || []
     // render players
     renderPlayers()
     renderStatus()
   }
   else if(msg.type === 'cardDrawn' || msg.type === 'card'){
+    currentCard = msg.card || msg.card
+    completedBy = []
     showCard(msg.card || msg.card)
   }
   else if(msg.type === 'cardCompletion'){
     // update completed list in modal
-    const list = msg.completed || []
+    const list = msg.completed || msg.completedBy || []
+    completedBy = list
     completedByList.innerHTML = ''
     list.forEach(n=>{
       const el = document.createElement('div')
@@ -314,6 +355,8 @@ function handleMessage(msg){
     renderStatus()
     cardModal.classList.add('hidden')
     alert(`Card resolved: ${msg.result}. Moved ${msg.delta} steps.`)
+    currentCard = null
+    completedBy = []
   }
   else if(msg.type === 'realmComplete'){
     position = msg.position || position
@@ -326,6 +369,8 @@ function handleMessage(msg){
   else if(msg.type === 'error'){
     alert(msg.message)
   }
+  // update debug panel after handling
+  updateDebug()
 }
 
 function renderPlayers(){
@@ -337,6 +382,7 @@ function renderPlayers(){
     el.innerHTML = `<div class="avatar"></div><div class="name">${p}</div>`
     playerList.appendChild(el)
   })
+  updateDebug()
 }
 
 function renderStatus(){
@@ -363,6 +409,7 @@ function renderStatus(){
   // highlight current segment
   const segs = document.querySelectorAll('.segment')
   segs.forEach((s,i)=> s.classList.toggle('current', i===position))
+  updateDebug()
 }
 
 function resetGame(){
