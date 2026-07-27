@@ -209,6 +209,16 @@ function handleMessage(msg){
     // show brief notice
     alert(`Card resolved: ${msg.result}. Moved ${msg.delta} steps.`)
   }
+  else if(msg.type === 'realmComplete'){
+    position = msg.position || position
+    renderStatus()
+    closeModal()
+    // disable draw button
+    const draw = document.getElementById('drawBtn')
+    if(draw) draw.disabled = true
+    // show final modal
+    showModal((()=>{ const d=document.createElement('div'); d.innerHTML = `<h2>Water Realm Complete</h2><p>Väinämöinen has reached the final segment.</p><p>Well done!</p>`; return d })())
+  }
   else if(msg.type === 'position'){
     position = msg.position
     renderStatus()
