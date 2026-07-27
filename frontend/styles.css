@@ -30,3 +30,31 @@ main{display:flex;gap:16px;margin-top:12px}
 .card-actions button{margin-right:8px;padding:8px 10px;border-radius:6px;border:0;cursor:pointer}
 .success{background:#3dbb6b;color:#052}
 .fail{background:#ff6b6b;color:#420}
+
+/* Pixel-art game styles */
+html,body{height:100%}
+.game-root{display:flex;flex-direction:column;align-items:center;justify-content:flex-start;height:100vh;background:#07202a}
+.game-container{display:flex;gap:16px;width:100%;max-width:1200px;margin-top:16px}
+.hud{width:260px;padding:12px;background:rgba(0,0,0,0.45);border:4px solid #123;box-shadow:4px 6px 0 rgba(0,0,0,0.6);color:#cff;}
+.hud h3{margin:0 0 8px;font-size:18px}
+.hud .players{display:flex;flex-direction:column;gap:8px}
+.player{display:flex;align-items:center;gap:8px;padding:6px;background:rgba(255,255,255,0.02);border:2px solid rgba(255,255,255,0.03);padding:6px;border-radius:6px}
+.avatar{width:36px;height:36px;background:#0aa;border:2px solid #023;border-radius:6px;image-rendering:pixelated}
+.player .name{font-weight:700}
+.board-wrap{flex:1;display:flex;align-items:center;justify-content:center;position:relative}
+.board{position:relative;width:640px;height:640px;background:#0e2d3a;border:8px solid #0b2130;box-shadow:6px 8px 0 rgba(0,0,0,0.6);}
+.board img{width:100%;height:100%;object-fit:cover;image-rendering:pixelated}
+.segments{position:absolute;inset:0;display:grid;grid-template-columns:repeat(4,1fr);grid-template-rows:repeat(4,1fr)}
+.segment{border:1px solid rgba(255,255,255,0.04);display:flex;align-items:center;justify-content:center;font-weight:700;color:#dff}
+.segment.current{background:rgba(255,255,255,0.06);box-shadow:inset 0 0 8px rgba(0,0,0,0.5)}
+.pawn{position:absolute;width:64px;height:64px;image-rendering:pixelated;transition:transform 300ms linear}
+.controls{position:fixed;left:50%;transform:translateX(-50%);bottom:18px;display:flex;gap:12px}
+.btn{background:#0aa;color:#042;padding:10px 14px;border-radius:8px;border:2px solid #023;font-weight:700}
+.card-modal{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);background:#e8fbff;color:#023;padding:12px;border:6px solid #022;border-radius:8px;image-rendering:pixelated}
+.card-modal h2{margin:0 0 8px}
+.complete-area{display:flex;align-items:center;gap:8px}
+.small-check{width:20px;height:20px;background:#3dbb6b;border-radius:4px}
+
+/* pixel scaling */
+img.pixel{image-rendering:pixelated;width:100%}
+

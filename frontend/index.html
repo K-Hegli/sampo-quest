@@ -23,38 +23,50 @@
       </div>
     </div>
 
-    <div id="appRoot" class="app hidden">
-      <header>
-        <h1>Water Realm — Playtest</h1>
-        <div id="playerDisplay" style="font-size:14px;opacity:0.9"></div>
-        <div class="controls">
-          <button id="drawBtn">Draw Card</button>
-          <button id="ainoBtn">Talk to Aino</button>
-          <button id="resetBtn">Reset</button>
+    <div id="appRoot" class="game-root hidden">
+      <div class="game-container">
+        <aside class="hud">
+          <h3 id="sessionName">Water Realm</h3>
+          <div class="players" id="playerList">
+            <!-- player entries -->
+          </div>
+          <div style="margin-top:12px;color:#9ff">
+            <div>Position: <span id="position">0</span> / <span id="progress">0/12</span></div>
+            <div id="sessionStatus" style="font-size:12px;margin-top:6px;opacity:0.9"></div>
+          </div>
+        </aside>
+
+        <div class="board-wrap">
+          <div class="board" id="board">
+            <img id="boardImg" class="pixel" src="/assets/water/board.png" alt="Water board"/>
+            <div id="segments" class="segments" aria-hidden="true"></div>
+            <img id="vainamoinenImg" class="pawn" src="/assets/water/vainamoinen.png" alt="Väinämöinen"/>
+            <canvas id="particles" width="640" height="640" style="position:absolute;left:0;top:0;pointer-events:none"></canvas>
+          </div>
         </div>
-      </header>
 
-      <main>
-        <section class="left">
-          <div class="board-wrap">
-            <img id="boardImg" src="../assets/water/board.png" alt="Water board"/>
-            <img id="vainamoinenImg" src="/assets/water/vainamoinen.png" alt="Väinämöinen" style="position:absolute;left:50%;top:50%;width:72px;transform:translate(-50%,-50%);pointer-events:none" />
+        <aside class="hud" style="width:240px">
+          <h3>Actions</h3>
+          <div style="display:flex;flex-direction:column;gap:8px;margin-top:8px">
+            <button id="drawBtn" class="btn">Draw Card</button>
+            <button id="ainoBtn" class="btn">Talk to Aino</button>
+            <button id="resetBtn" class="btn">Reset</button>
           </div>
-        </section>
+          <div id="debugPanel" style="margin-top:12px;color:#cfc;font-size:12px"></div>
+        </aside>
+      </div>
 
-        <section class="right">
-          <div class="status">
-            <p><strong>Position:</strong> <span id="position">0</span></p>
-            <p><strong>Realm Progress:</strong> <span id="progress">0/16</span></p>
-          </div>
+      <div id="cardModal" class="card-modal hidden" role="dialog" aria-modal="true" aria-labelledby="cardTitle">
+        <h2 id="cardTitle">Card</h2>
+        <div id="cardInstructions"></div>
+        <div id="cardDifficulty" style="margin-top:8px"></div>
+        <div class="complete-area" style="margin-top:12px">
+          <button id="completeBtn" class="btn">Complete</button>
+          <div id="completedByList" style="display:flex;gap:6px;margin-left:8px"></div>
+        </div>
+      </div>
 
-          <div id="cardArea" class="card-area">
-            <p class="hint">Draw a card to begin.</p>
-          </div>
-        </section>
-      </main>
-
-      <div id="modal" class="modal hidden">
+      <div id="overlayModal" class="modal hidden">
         <div class="modal-content">
           <button id="closeModal" class="close">×</button>
           <div id="modalBody"></div>

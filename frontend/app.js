@@ -1,7 +1,10 @@
-const CARD_JSON = '../cards/water.json'
+const CARD_JSON = '/cards/water.json'
 let cards = []
 let position = 0
 const MAX_STEPS = 12
+let ws = null
+let sessionId = null
+let players = []
 
 async function init(){
   try{
@@ -16,6 +19,31 @@ async function init(){
   // Router: if the URL already contains /session/<id>, auto-open session
   const path = location.pathname || '/'
   const sessionMatch = path.match(/^\/session\/(.+)/)
+  // DOM refs
+  const createBtn = document.getElementById('createBtn')
+  const joinBtn = document.getElementById('joinBtn')
+  const sessionInput = document.getElementById('sessionInput')
+  const nameInput = document.getElementById('playerNameInput')
+  const loginScreen = document.getElementById('loginScreen')
+  const appRoot = document.getElementById('appRoot')
+  const playerList = document.getElementById('playerList')
+  const sessionName = document.getElementById('sessionName')
+  const sessionStatus = document.getElementById('sessionStatus')
+  const debugPanel = document.getElementById('debugPanel')
+  const boardEl = document.getElementById('board')
+  const boardImg = document.getElementById('boardImg')
+  const vainImg = document.getElementById('vainamoinenImg')
+  const segmentsEl = document.getElementById('segments')
+  const drawBtn = document.getElementById('drawBtn')
+  const ainoBtn = document.getElementById('ainoBtn')
+  const resetBtn = document.getElementById('resetBtn')
+  const cardModal = document.getElementById('cardModal')
+  const overlayModal = document.getElementById('overlayModal')
+  const modalBody = document.getElementById('modalBody')
+  const closeModalBtn = document.getElementById('closeModal')
+  const completeBtn = document.getElementById('completeBtn')
+  const completedByList = document.getElementById('completedByList')
+
   if(sessionMatch){
     const sid = sessionMatch[1]
     // hide login and show app
@@ -28,14 +56,6 @@ async function init(){
     setTimeout(()=>{ if(ws && ws.readyState===WebSocket.OPEN) sendWS({ type:'join', sessionId, name: window.playerName }) }, 300)
   }
 
-  // Setup login flow: show login screen first
-  const createBtn = document.getElementById('createBtn')
-  const joinBtn = document.getElementById('joinBtn')
-  const sessionInput = document.getElementById('sessionInput')
-  const nameInput = document.getElementById('playerNameInput')
-  const loginScreen = document.getElementById('loginScreen')
-  const appRoot = document.getElementById('appRoot')
-
   function doLogin(){
     const name = (nameInput.value || 'Player').trim()
     window.playerName = name
@@ -43,10 +63,6 @@ async function init(){
     loginScreen.classList.add('hidden')
     appRoot.classList.remove('hidden')
   }
-
-  // WebSocket connection (will be created when creating/joining a session)
-  let ws = null
-  let sessionId = null
 
   function connectWS(){
     if(ws) return
@@ -104,14 +120,23 @@ async function init(){
   nameInput.addEventListener('keypress', (e)=>{ if(e.key==='Enter') doLogin() })
 
   // Wire main controls
-  document.getElementById('drawBtn').addEventListener('click', ()=>{
-    // if connected to session, ask server to draw
-    if(ws && sessionId) sendWS({ type:'draw' })
-    else drawCard()
-  })
-  document.getElementById('ainoBtn').addEventListener('click', showAino)
-  document.getElementById('resetBtn').addEventListener('click', resetGame)
-  document.getElementById('closeModal').addEventListener('click', closeModal)
+  drawBtn.addEventListener('click', ()=>{ if(ws && sessionId) sendWS({ type:'draw' }) ; else drawCard() })
+  ainoBtn.addEventListener('click', showAino)
+  resetBtn.addEventListener('click', resetGame)
+  closeModalBtn.addEventListener('click', ()=>{ overlayModal.classList.add('hidden') })
+  completeBtn.addEventListener('click', ()=>{ if(ws && sessionId) sendWS({ type:'complete' }); completeBtn.disabled=true; completeBtn.textContent='Waiting...' })
+
+  // render segments grid
+  segmentsEl.innerHTML = ''
+  for(let i=0;i<MAX_STEPS;i++){
+    const s = document.createElement('div')
+    s.className = 'segment'
+    s.textContent = i+1
+    segmentsEl.appendChild(s)
+  }
+
+  // debug
+  debugPanel.textContent = `Backend: ${ (typeof window.BACKEND_WS_URL==='string') ? window.BACKEND_WS_URL : 'unset' }`
 
   renderStatus()
 }
@@ -146,46 +171,23 @@ function renderAino(aino){
 }
 
 function showCard(card){
-  const el = document.createElement('div')
-  el.innerHTML = `
-    <h3 class="card-title">${card.title}</h3>
-    <div class="card-instructions">${card.instructions}</div>
-    <div class="card-meta">Difficulty: ${card.difficulty} — Moves: ${card.successSteps}</div>
-    <div id="completionArea" style="margin-top:12px"></div>
-  `
-
-  const completionArea = el.querySelector('#completionArea')
-
-  if(ws && sessionId){
-    // multiplayer: show Complete button (each player must click)
-    const btn = document.createElement('button')
-    btn.textContent = 'Complete'
-    btn.className = 'success'
-    btn.addEventListener('click', ()=>{
-      sendWS({ type: 'complete' })
-      btn.disabled = true
-      btn.textContent = 'Waiting...'
-    })
-    completionArea.appendChild(btn)
-    const list = document.createElement('div')
-    list.id = 'completionList'
-    list.textContent = 'Completed: 0'
-    completionArea.appendChild(list)
+  // populate card modal
+  document.getElementById('cardTitle').textContent = card.title
+  document.getElementById('cardInstructions').innerHTML = card.instructions
+  document.getElementById('cardDifficulty').textContent = `Difficulty: ${card.difficulty} — Moves: ${card.successSteps}`
+  completedByList.innerHTML = ''
+  // show modal
+  cardModal.classList.remove('hidden')
+  // if offline single player
+  if(!ws || !sessionId){
+    completeBtn.textContent = 'Success'
+    completeBtn.disabled = false
+    completeBtn.onclick = ()=>{ applyMove(card.successSteps); cardModal.classList.add('hidden') }
   } else {
-    // single-player fallback: immediate success/fail
-    const succ = document.createElement('button')
-    succ.className = 'success'
-    succ.textContent = 'Success'
-    succ.addEventListener('click', ()=>{ applyMove(card.successSteps); closeModal() })
-    const fail = document.createElement('button')
-    fail.className = 'fail'
-    fail.textContent = 'Fail'
-    fail.addEventListener('click', ()=>{ applyMove(card.failSteps); closeModal() })
-    completionArea.appendChild(succ)
-    completionArea.appendChild(fail)
+    completeBtn.textContent = 'Complete'
+    completeBtn.disabled = false
+    // completions will be updated via server messages
   }
-
-  showModal(el)
 }
 
 function applyMove(delta){
@@ -200,52 +202,67 @@ function applyMove(delta){
 function handleMessage(msg){
   if(msg.type === 'created'){
     sessionId = msg.sessionId
+    history.replaceState({},'',`/session/${sessionId}`)
     document.getElementById('playerDisplay').textContent = `Player: ${window.playerName} — Session: ${sessionId}`
+    sessionName.textContent = `Water Realm — ${sessionId}`
+    sessionStatus.textContent = 'Session created'
     alert(`Session created: ${sessionId} — share the code with others to join`)
   }
   else if(msg.type === 'joined'){
     sessionId = msg.sessionId
-    document.getElementById('playerDisplay').textContent = `Player: ${window.playerName} — Session: ${sessionId}`
+    sessionName.textContent = `Water Realm — ${sessionId}`
+    sessionStatus.textContent = 'Joined session'
   }
-  else if(msg.type === 'players'){
-    document.getElementById('playerDisplay').textContent = `Players: ${msg.players.join(', ')}`
+  else if(msg.type === 'stateSync'){
+    // authoritative state from server
+    players = msg.state.players || []
+    position = msg.state.position || 0
+    // render players
+    renderPlayers()
+    renderStatus()
   }
-  else if(msg.type === 'cardDrawn'){
-    // show the same card for all
-    showCard(msg.card)
+  else if(msg.type === 'cardDrawn' || msg.type === 'card'){
+    showCard(msg.card || msg.card)
   }
   else if(msg.type === 'cardCompletion'){
-    // update completion list in modal
-    const list = document.getElementById('completionList')
-    if(list){
-      list.textContent = `Completed: ${msg.completed.length}`
-    }
+    // update completed list in modal
+    const list = msg.completed || []
+    completedByList.innerHTML = ''
+    list.forEach(n=>{
+      const el = document.createElement('div')
+      el.className = 'small-check'
+      el.title = n
+      completedByList.appendChild(el)
+    })
   }
   else if(msg.type === 'cardResolved'){
-    // card resolved (all completed) — close modal and update position
     position = msg.position || position
     renderStatus()
-    closeModal()
-    // show brief notice
+    cardModal.classList.add('hidden')
     alert(`Card resolved: ${msg.result}. Moved ${msg.delta} steps.`)
   }
   else if(msg.type === 'realmComplete'){
     position = msg.position || position
     renderStatus()
-    closeModal()
-    // disable draw button
-    const draw = document.getElementById('drawBtn')
-    if(draw) draw.disabled = true
-    // show final modal
-    showModal((()=>{ const d=document.createElement('div'); d.innerHTML = `<h2>Water Realm Complete</h2><p>Väinämöinen has reached the final segment.</p><p>Well done!</p>`; return d })())
-  }
-  else if(msg.type === 'position'){
-    position = msg.position
-    renderStatus()
+    cardModal.classList.add('hidden')
+    drawBtn.disabled = true
+    overlayModal.classList.remove('hidden')
+    modalBody.innerHTML = `<h2>Water Realm Complete</h2><p>Väinämöinen has reached the final segment.</p><p>Well done!</p>`
   }
   else if(msg.type === 'error'){
     alert(msg.message)
   }
+}
+
+function renderPlayers(){
+  const playerList = document.getElementById('playerList')
+  playerList.innerHTML = ''
+  players.forEach(p=>{
+    const el = document.createElement('div')
+    el.className = 'player'
+    el.innerHTML = `<div class="avatar"></div><div class="name">${p}</div>`
+    playerList.appendChild(el)
+  })
 }
 
 function renderStatus(){
@@ -263,9 +280,15 @@ function renderStatus(){
   const x = cx + radius * Math.cos(angle - Math.PI/2)
   const y = cy + radius * Math.sin(angle - Math.PI/2)
   // position absolutely relative to board container
-  vain.style.left = `${x}px`
-  vain.style.top = `${y}px`
+  const boardRect = document.getElementById('board').getBoundingClientRect()
+  const relX = (x / rect.width) * boardRect.width
+  const relY = (y / rect.height) * boardRect.height
+  vain.style.left = `${relX}px`
+  vain.style.top = `${relY}px`
   vain.style.transform = `translate(-50%,-50%)`
+  // highlight current segment
+  const segs = document.querySelectorAll('.segment')
+  segs.forEach((s,i)=> s.classList.toggle('current', i===position))
 }
 
 function resetGame(){
