@@ -5,7 +5,13 @@ const WebSocket = require('ws')
 
 const PORT = process.env.PORT || 8080
 
-const wss = new WebSocket.Server({ port: PORT })
+const http = require('http')
+const fs = require('fs')
+const path = require('path')
+const { v4: uuidv4 } = require('uuid')
+const WebSocket = require('ws')
+
+const PORT = process.env.PORT || 8080
 
 // Load water cards (English only)
 const cardsPath = path.join(__dirname, '..', 'cards', 'water.json')
@@ -16,8 +22,7 @@ try{
   console.error('Failed to load water cards:', e)
 }
 
-const sessions = new Map() // sessionId => { players: Map<playerId, {name,ws}>, position }
-const sessions = new Map() // sessionId => { players: Map<playerId, {name,ws}>, position, currentCard, completions:Set }
+const sessions = new Map() // sessionId => { players: Map<playerId, {name,ws}>, position, currentCard, completions:Set, finished }
 
 function makeSessionId(){
   return Math.random().toString(36).slice(2,8).toUpperCase()
@@ -32,77 +37,138 @@ function broadcastSession(sessionId, msg){
   }
 }
 
-wss.on('connection', function connection(ws){
+function buildState(sessionId){
+  const s = sessions.get(sessionId)
+  if(!s) return null
+  return {
+    sessionId,
+    players: Array.from(s.players.values()).map(p=>p.name),
+    position: s.position,
+    currentCard: s.currentCard || null,
+    completedBy: Array.from(s.completions || []).map(id=> { const p = s.players.get(id); return p? p.name : id }),
+    finished: !!s.finished
+  }
+}
+
+const server = http.createServer((req,res)=>{
+  if(req.url === '/health'){
+    res.writeHead(200, {'Content-Type':'application/json'})
+    res.end(JSON.stringify({ status:'ok', time: Date.now() }))
+    return
+  }
+  res.writeHead(404)
+  res.end()
+})
+
+const wss = new WebSocket.Server({ server })
+
+wss.on('connection', function connection(ws, req){
   ws.id = uuidv4()
+  console.log(new Date().toISOString(), 'ws connection', ws.id, 'from', req.socket.remoteAddress)
+
+  function send(obj){ try{ ws.send(JSON.stringify(obj)) }catch(e){} }
+
   ws.on('message', function incoming(message){
     let msg
     try{ msg = JSON.parse(message) }catch(e){ return }
 
-    if(msg.type === 'create'){
+    console.log(new Date().toISOString(), 'recv', msg.type, 'from', ws.id)
+
+    // Accept both old and new event names
+    const type = msg.type
+
+    if(type === 'create' || type === 'createSession'){
       const sessionId = makeSessionId()
-      const s = { players: new Map(), position: 0 }
+      const s = { players: new Map(), position: 0, currentCard: null, completions: new Set(), finished: false }
       sessions.set(sessionId, s)
-      s.players.set(ws.id, { name: msg.name || 'Player', ws })
+      s.players.set(ws.id, { name: (msg.name || 'Player').slice(0,32), ws })
       ws.sessionId = sessionId
       ws.playerName = msg.name
-      // reply with created
-      ws.send(JSON.stringify({ type:'created', sessionId, players: Array.from(s.players.values()).map(p=>p.name), position: s.position }))
+      console.log(new Date().toISOString(), 'session created', sessionId, 'by', ws.id)
+      send({ type: (type==='createSession'?'sessionCreated':'created'), sessionId, state: buildState(sessionId) })
+      broadcastSession(sessionId, { type:'stateSync', state: buildState(sessionId) })
     }
 
-    else if(msg.type === 'join'){
-      const sessionId = msg.sessionId
+    else if(type === 'join' || type === 'joinSession'){
+      const sessionId = (msg.sessionId || msg.session || '').toString().toUpperCase()
       const s = sessions.get(sessionId)
-      if(!s){ ws.send(JSON.stringify({ type:'error', message:'Session not found' })); return }
-      if(s.players.size >= 4){ ws.send(JSON.stringify({ type:'error', message:'Session full' })); return }
-      s.players.set(ws.id, { name: msg.name || 'Player', ws })
+      if(!s){ send({ type:'error', message:'Session not found' }); return }
+      if(s.players.size >= 4){ send({ type:'error', message:'Session full' }); return }
+      s.players.set(ws.id, { name: (msg.name || 'Player').slice(0,32), ws })
       ws.sessionId = sessionId
       ws.playerName = msg.name
-      // broadcast players
-      broadcastSession(sessionId, { type:'players', players: Array.from(s.players.values()).map(p=>p.name) })
-      // send session state to joined
-      ws.send(JSON.stringify({ type:'joined', sessionId, position: s.position }))
+      console.log(new Date().toISOString(), 'player joined', ws.id, '->', sessionId)
+      broadcastSession(sessionId, { type:'playerJoined', name: msg.name, state: buildState(sessionId) })
+      send({ type:(type==='joinSession'?'joinedSession':'joined'), sessionId, state: buildState(sessionId) })
     }
 
-    else if(msg.type === 'draw'){
-      // select random card and broadcast; initialize completion tracking
+    else if(type === 'draw' || type === 'drawCard'){
       const sessionId = ws.sessionId
       const s = sessions.get(sessionId)
-        if(!s) return
-        if(s.finished){ ws.send(JSON.stringify({ type:'error', message:'Realm already completed' })); return }
-        const card = waterCards[Math.floor(Math.random()*waterCards.length)]
-        s.currentCard = card
+      if(!s) return
+      if(s.finished){ send({ type:'error', message:'Realm already completed' }); return }
+      const card = waterCards[Math.floor(Math.random()*waterCards.length)]
+      s.currentCard = { id: card.id, title: card.title, instructions: card.instructions, successSteps: card.successSteps }
       s.completions = new Set()
-      broadcastSession(sessionId, { type:'cardDrawn', card })
-        else if(msg.type === 'complete'){
-          // mark this player as completed for current card; when all players complete, apply successSteps
-          const sessionId = ws.sessionId
-          const s = sessions.get(sessionId)
-          if(!s || !s.currentCard) return
-          s.completions.add(ws.id)
-          // build list of completed player names
-          const completedNames = Array.from(s.completions).map(id => {
-            const p = s.players.get(id)
-            return p ? p.name : id
-          })
-          broadcastSession(sessionId, { type:'cardCompletion', completed: completedNames })
-          if(s.completions.size === s.players.size){
-            // all players completed — apply successSteps
-            const delta = Number(s.currentCard.successSteps) || 0
-            s.position += delta
-            if(s.position < 0) s.position = 0
-              // check for realm completion (12 segments)
-              if(s.position >= 12){
-                s.finished = true
-                broadcastSession(sessionId, { type:'cardResolved', result: 'success', delta, position: s.position })
-                broadcastSession(sessionId, { type:'realmComplete', position: s.position })
-              } else {
-                // broadcast resolved and new position
-                broadcastSession(sessionId, { type:'cardResolved', result: 'success', delta, position: s.position })
-              }
-              s.currentCard = null
-              s.completions = new Set()
-          }
+      console.log(new Date().toISOString(), 'card drawn', s.currentCard.id, 'in', sessionId)
+      broadcastSession(sessionId, { type:'drawCard', card: s.currentCard, state: buildState(sessionId) })
+    }
+
+    else if(type === 'complete' || type === 'playerComplete'){
+      const sessionId = ws.sessionId
+      const s = sessions.get(sessionId)
+      if(!s || !s.currentCard) return
+      s.completions.add(ws.id)
+      console.log(new Date().toISOString(), 'player complete', ws.id, 'in', sessionId)
+      broadcastSession(sessionId, { type:'cardComplete', completedBy: Array.from(s.completions).map(id=> { const p = s.players.get(id); return p? p.name : id }), state: buildState(sessionId) })
+      // if all connected players completed
+      if(s.completions.size === s.players.size){
+        const delta = Number(s.currentCard.successSteps) || 0
+        s.position += delta
+        if(s.position < 0) s.position = 0
+        console.log(new Date().toISOString(), 'card resolved, movement', delta, '-> pos', s.position)
+        if(s.position > 11){
+          s.finished = true
+          broadcastSession(sessionId, { type:'movement', position: s.position, delta, state: buildState(sessionId) })
+          broadcastSession(sessionId, { type:'realmComplete', position: s.position, state: buildState(sessionId) })
+        } else {
+          broadcastSession(sessionId, { type:'movement', position: s.position, delta, state: buildState(sessionId) })
         }
+        s.currentCard = null
+        s.completions = new Set()
+        // broadcast full state
+        broadcastSession(sessionId, { type:'stateSync', state: buildState(sessionId) })
+      }
+    }
+
+    else if(type === 'stateRequest'){
+      const sessionId = ws.sessionId
+      send({ type:'stateSync', state: buildState(sessionId) })
+    }
+
+  })
+
+  ws.on('close', function(){
+    const sessionId = ws.sessionId
+    console.log(new Date().toISOString(), 'ws close', ws.id, 'session', sessionId)
+    if(!sessionId) return
+    const s = sessions.get(sessionId)
+    if(!s) return
+    s.players.delete(ws.id)
+    // if no players, remove session
+    if(s.players.size === 0) { sessions.delete(sessionId); console.log(new Date().toISOString(),'session removed', sessionId); return }
+    // remove from completions
+    if(s.completions) s.completions.delete(ws.id)
+    // broadcast state
+    broadcastSession(sessionId, { type:'playerLeft', id: ws.id, state: buildState(sessionId) })
+  })
+
+})
+
+server.listen(PORT, ()=>{
+  console.log(new Date().toISOString(), 'Server listening on', PORT)
+})
+
     }
 
     else if(msg.type === 'move'){
