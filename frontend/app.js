@@ -54,10 +54,17 @@ async function init(){
   createBtn.addEventListener('click', ()=>{
     doLogin()
     connectWS()
-    // wait briefly for connection
+    // wait briefly for connection; if no WS open, create a local session fallback so creator can test alone
     setTimeout(()=>{
-      sendWS({ type:'create', name: window.playerName })
-    }, 200)
+      if(ws && ws.readyState===WebSocket.OPEN){
+        sendWS({ type:'create', name: window.playerName })
+      } else {
+        // local fallback session code
+        sessionId = Math.random().toString(36).slice(2,8).toUpperCase()
+        document.getElementById('playerDisplay').textContent = `Player: ${window.playerName} — Session: ${sessionId} (local)`
+        alert(`Local session created: ${sessionId} (no backend connection). Invite others once backend is configured.`)
+      }
+    }, 400)
   })
 
   joinBtn.addEventListener('click', ()=>{
@@ -66,8 +73,12 @@ async function init(){
     doLogin()
     connectWS()
     setTimeout(()=>{
-      sendWS({ type:'join', sessionId: code, name: window.playerName })
-    }, 200)
+      if(ws && ws.readyState===WebSocket.OPEN){
+        sendWS({ type:'join', sessionId: code, name: window.playerName })
+      } else {
+        alert('Unable to join: backend WebSocket not connected. Configure BACKEND_WS_URL or run the backend and try again.')
+      }
+    }, 400)
   })
 
   nameInput.addEventListener('keypress', (e)=>{ if(e.key==='Enter') doLogin() })
