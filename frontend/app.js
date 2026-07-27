@@ -6,6 +6,51 @@ let ws = null
 let sessionId = null
 let players = []
 
+// Lightweight mock WebSocket for offline/dev testing
+class MockSocket{
+  constructor(){ this._listeners = {}; this.readyState = 1; setTimeout(()=>this._trigger('open'),10); }
+  addEventListener(ev, fn){ (this._listeners[ev] ||= []).push(fn) }
+  _trigger(ev, arg){ const list = this._listeners[ev] || []; list.forEach(fn=>{ try{ fn(arg) }catch(e){} }) }
+  send(data){ try{ const msg = JSON.parse(data); this._handle(msg) }catch(e){} }
+  close(){ this.readyState = 3; this._trigger('close') }
+  _handle(msg){
+    // simulate server-like responses
+    const type = msg.type
+    if(type==='create'){
+      const sid = (Math.random().toString(36).slice(2,8)).toUpperCase()
+      this.sessionId = sid
+      this._trigger('message', { data: JSON.stringify({ type:'created', sessionId: sid, state:{ sessionId: sid, players:[msg.name||window.playerName], position:0 } }) })
+      this._trigger('message', { data: JSON.stringify({ type:'stateSync', state:{ sessionId: sid, players:[msg.name||window.playerName], position:0 } }) })
+    }
+    else if(type==='join'){
+      const sid = msg.sessionId
+      this.sessionId = sid
+      this._trigger('message', { data: JSON.stringify({ type:'joined', sessionId: sid, state:{ sessionId: sid, players:[msg.name||window.playerName], position:0 } }) })
+    }
+    else if(type==='draw'){
+      const pool = (window.cards || [])
+      const card = pool[Math.floor(Math.random()*Math.max(pool.length,1))] || { id:'mock-1', title:'Mock Card', instructions:'Do a thing', successSteps:1 }
+      this._trigger('message', { data: JSON.stringify({ type:'card', card }) })
+    }
+    else if(type==='complete'){
+      // immediate resolved for mock: move by card.successSteps if available
+      const delta = 1
+      const newPos = (this._pos||0) + delta
+      this._pos = newPos
+      this._trigger('message', { data: JSON.stringify({ type:'cardComplete', completed: [window.playerName], state:{ sessionId: this.sessionId, players:[window.playerName], position: this._pos } }) })
+      setTimeout(()=>{
+        this._trigger('message', { data: JSON.stringify({ type:'cardResolved', result:'success', delta, position: this._pos, state:{ sessionId: this.sessionId, players:[window.playerName], position: this._pos } }) })
+        this._trigger('message', { data: JSON.stringify({ type:'stateSync', state:{ sessionId: this.sessionId, players:[window.playerName], position: this._pos } }) })
+      },300)
+    }
+    else if(type==='stateRequest'){
+      this._trigger('message', { data: JSON.stringify({ type:'stateSync', state:{ sessionId: this.sessionId||null, players: [window.playerName].filter(Boolean), position: this._pos||0 } }) })
+    }
+  }
+}
+
+function initMockSocket(){ ws = new MockSocket(); ws.addEventListener('message', (e)=>{ let msg; try{ msg = JSON.parse(e.data) }catch(err){ return } handleMessage(msg) }); ws.addEventListener('open', ()=>{ console.log('mock ws open') }) }
+
 async function init(){
   try{
     const res = await fetch(CARD_JSON)
@@ -71,7 +116,8 @@ async function init(){
     const envUrl = (typeof window !== 'undefined' && window.BACKEND_WS_URL) ? window.BACKEND_WS_URL : null
     const url = envUrl || ((location.hostname === 'localhost') ? 'ws://localhost:8080' : `wss://${location.hostname}:8080`)
     ws = new WebSocket(url)
-    ws.addEventListener('open', ()=>{ console.log('ws open') })
+    ws.addEventListener('open', ()=>{ console.log('ws open'); if(sessionId) sendWS({ type:'stateRequest' }) })
+    ws.addEventListener('error', (err)=>{ console.warn('ws error, falling back to mock', err); try{ initMockSocket() }catch(e){ console.error(e) } })
     ws.addEventListener('message', e=>{
       let msg
       try{ msg = JSON.parse(e.data) }catch(err){return}
